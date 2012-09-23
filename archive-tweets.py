@@ -5,12 +5,9 @@ import pytz
 import os
 
 # Parameters.
-me = 'username'
-urlprefix = 'http://twitter.com/%s/status/' % me
-tweetdir = os.environ['HOME'] + '/Dropbox/twitter/'
-tweetfile = tweetdir + 'twitter.txt'
-idfile = tweetdir + 'lastID.txt'
-datefmt = '%B %-d, %Y at %-I:%M %p'
+accounts = ['account1', 'account2'] # Add accounts to this list to archive multiple accounts
+tweetdir = os.environ['HOME'] + '/Dropbox/Backups/twitter/'
+datefmt = '%B %d, %Y at %I:%M %p'
 homeTZ = pytz.timezone('US/Central')
 utc = pytz.utc
 
@@ -28,26 +25,31 @@ def setup_api():
 # Authorize.
 api = setup_api()
 
-# Get the ID of the last downloaded tweet.
-with open(idfile, 'r') as f:
-  lastID = f.read().rstrip()
+for account in accounts:
+  urlprefix = 'http://twitter.com/%s/status/' % account
+  tweetfile = tweetdir + '%s_twitter.txt' % account
+  idfile = tweetdir + '%s_lastID.txt' % account
 
-# Collect all the tweets since the last one.
-tweets = api.user_timeline(me, since_id=lastID, count=200, include_rts=True)
+  # Get the ID of the last downloaded tweet.
+  with open(idfile, 'r') as f:
+    lastID = f.read().rstrip()
 
-# Write them out to the twitter.txt file.
-with open(tweetfile, 'a') as f:
-    for t in reversed(tweets):
-      ts = utc.localize(t.created_at).astimezone(homeTZ)
-      lines = ['',
-               t.text,
-               ts.strftime(datefmt),
-               urlprefix + t.id_str,
-               '- - - - -',
-               '']
-      f.write('\n'.join(lines).encode('utf8'))
-      lastID = t.id_str
+  # Collect all the tweets since the last one.
+  tweets = api.user_timeline(account, since_id=lastID, count=200, include_rts=True)
 
-# Update the ID of the last downloaded tweet.
-with open(idfile, 'w') as f:
-  lastID = f.write(lastID)
+  # Write them out to the twitter.txt file.
+  with open(tweetfile, 'a') as f:
+      for t in reversed(tweets):
+        ts = utc.localize(t.created_at).astimezone(homeTZ)
+        lines = ['',
+                 t.text,
+                 ts.strftime(datefmt),
+                 urlprefix + t.id_str,
+                 '- - - - -',
+                 '']
+        f.write('\n'.join(lines).encode('utf8'))
+        lastID = t.id_str
+
+  # Update the ID of the last downloaded tweet.
+  with open(idfile, 'w') as f:
+    lastID = f.write(lastID)
